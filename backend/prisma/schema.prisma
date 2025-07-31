@@ -1,15 +1,244 @@
+// schema.prisma
+
+// Prisma 클라이언트 생성 설정 (Node.js 환경)
 generator client {
   provider = "prisma-client-js"
 }
 
+// PostgreSQL 데이터베이스 연결 설정
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
+/// 회원(User) 모델: 서비스 사용자의 기본 정보와 관계를 저장합니다
 model User {
-  id       Int     @id @default(autoincrement())
-  email    String  @unique
-  name     String?
+  id Int @id @default(autoincrement())
+  /// 기본 키: 자동 증가 정수형 ID
+
+  email String @unique
+  /// 로그인에 쓰이는 이메일 (중복 불가)
+
+  passwordHash String?
+  /// 비밀번호 해시, 소셜 로그인 시 비워질 수 있음
+
+  nickname String?
+  /// 유저 닉네임 (선택 사항)
+
+  age Int
+  /// 만 나이 (게시판 분류 기준)
+
+  gender String?
+  /// 성별 (예: "male", "female", "other", 선택 사항)
+
+  phone String? @unique
+  /// 휴대폰 번호 (본인 인증용, 중복 불가)
+
+  socialId String? @unique
+  /// 소셜 로그인 연동용 외부 ID (중복 불가)
+
+  posts Post[]
+  /// 작성한 게시글 목록 (1:N)
+
+  comments Comment[]
+  /// 작성한 댓글 목록 (1:N)
+
+  sentMessages Message[] @relation("SentMessages")
+  /// 보낸 메시지 목록 (1:N 관계)
+
+  receivedMessages Message[] @relation("ReceivedMessages")
+  /// 받은 메시지 목록 (1:N)
+
+  reports Report[] @relation("Reporter")
+  /// 신고한 이력 목록
+
+  blocks Block[] @relation("Blocker")
+  /// 이 유저가 차단한 사용자 목록
+
+  blockedBy Block[] @relation("BlockedUser")
+  /// 이 유저를 차단한 사용자 목록 (반대 관계)
+
+  subscriptions Subscription[]
+  /// 구독 정보 목록 (다대일 관계의 반대편)
+
   createdAt DateTime @default(now())
+  /// 생성 시각 자동 기록
+
+  updatedAt DateTime @updatedAt
+  /// 마지막 수정 시각 자동 기록
+}
+
+/// 게시판(Board) 모델: 나이 + 주제 조합으로 고유 게시판을 표현합니다
+model Board {
+  id Int @id @default(autoincrement())
+  /// 게시판 고유 ID
+
+  age Int
+  /// 게시판 대상 만 나이
+
+  topic String
+  /// 게시판 주제명 (예: "남", "연애", "취미" 등)
+
+  posts Post[]
+  /// 이 게시판 소속 게시글 목록
+
+  createdAt DateTime @default(now())
+  /// 생성 시각
+
+  updatedAt DateTime @updatedAt
+  /// 수정 시각
+  /// 나이+주제 조합은 유일해야 함
+
+  @@unique([age, topic])
+}
+
+/// 게시글(Post) 모델: 게시판 내 글
+model Post {
+  id Int @id @default(autoincrement())
+  /// 게시글 ID
+
+  board   Board @relation(fields: [boardId], references: [id])
+  boardId Int
+  /// 게시판 외래키
+
+  author User @relation(fields: [userId], references: [id])
+  userId Int
+  /// 작성자 외래키
+
+  title String
+  /// 게시글 제목
+
+  content String
+  /// 게시글 본문
+
+  comments Comment[]
+  /// 댓글 목록
+
+  createdAt DateTime @default(now())
+  /// 작성 시각
+
+  updatedAt DateTime @updatedAt
+  /// 수정 시각
+}
+
+/// 댓글(Comment) 모델: 게시글에 다는 댓글
+model Comment {
+  id Int @id @default(autoincrement())
+  /// 댓글 ID
+
+  post   Post @relation(fields: [postId], references: [id])
+  postId Int
+  /// 대상 게시글 외래키
+
+  author User @relation(fields: [userId], references: [id])
+  userId Int
+  /// 작성자 외래키
+
+  content String
+  /// 댓글 내용
+
+  createdAt DateTime @default(now())
+  /// 작성 시각
+
+  updatedAt DateTime @updatedAt
+  /// 수정 시각
+}
+
+/// 메시지(Message) 모델: 1:1 쪽지 및 채팅
+model Message {
+  id Int @id @default(autoincrement())
+  /// 메시지 ID
+
+  sender   User @relation("SentMessages", fields: [senderId], references: [id])
+  senderId Int
+  /// 보낸 사람 외래키
+
+  receiver   User @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  receiverId Int
+  /// 받은 사람 외래키
+
+  content String
+  /// 메시지 내용
+
+  read Boolean @default(false)
+  /// 읽음 상태
+
+  createdAt DateTime @default(now())
+  /// 생성 시각
+
+  updatedAt DateTime @updatedAt
+  /// 수정 시각
+}
+
+/// 신고(Report) 모델: 게시글, 댓글, 유저, 메시지 등에 대한 신고 내역
+model Report {
+  id Int @id @default(autoincrement())
+  /// 신고 ID
+
+  reporter   User @relation("Reporter", fields: [reporterId], references: [id])
+  reporterId Int
+  /// 신고한 사용자
+
+  targetType String
+  /// 신고 대상 유형 (예: "post", "comment", "user", "message")
+
+  targetId Int
+  /// 신고 대상 ID
+
+  reason String
+  /// 신고 사유
+
+  status String @default("pending")
+  /// 처리 상태 ("pending", "resolved", "rejected" 등)
+
+  createdAt DateTime @default(now())
+  /// 신고 접수 시간
+
+  updatedAt DateTime @updatedAt
+  /// 처리 상태 갱신 시간
+}
+
+/// 차단(Block) 모델: 유저 간 차단 관계 저장
+model Block {
+  id Int @id @default(autoincrement())
+  /// 차단 기록 ID
+
+  blocker   User @relation("Blocker", fields: [blockerId], references: [id])
+  blockerId Int
+  /// 차단한 유저 ID
+
+  blockedUser   User @relation("BlockedUser", fields: [blockedUserId], references: [id])
+  blockedUserId Int
+  /// 차단된 유저 ID
+
+  createdAt DateTime @default(now())
+  /// 차단 생성 시간
+}
+
+/// 구독(Subscription) 모델: 부분 유료화 구독 정보 관리용
+model Subscription {
+  id Int @id @default(autoincrement())
+  /// 구독 ID
+
+  user   User @relation(fields: [userId], references: [id])
+  userId Int
+  /// 구독한 유저 외래키
+
+  minAge Int
+  /// 구독 허용 나이 범위 최저 (예: 18)
+
+  maxAge Int
+  /// 구독 허용 나이 범위 최고 (예: 22)
+
+  startedAt DateTime @default(now())
+  /// 구독 시작 시각
+
+  endedAt DateTime?
+  /// 구독 종료 시각 (만료 시점)
+
+  createdAt DateTime @default(now())
+  /// 레코드 생성 시각
+
+  updatedAt DateTime @updatedAt
+  /// 레코드 수정 시각
 }
