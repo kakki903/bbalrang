@@ -1,59 +1,56 @@
-import { useState, useContext } from "react";
+import { useState } from "react";
 import { useRouter } from "next/router";
 import api from "../utils/api";
-import { AuthContext } from "../context/AuthContext";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const router = useRouter();
-  const { login, user } = useContext(AuthContext);
 
-  if (user) {
-    router.push("/");
-    return null;
-  }
-
-  const handleSubmit = async (e) => {
+  async function handleSubmit(e) {
     e.preventDefault();
     setError("");
     try {
-      const { data } = await api.post("/auth/login", { email, password });
-      login(data.token);
+      const res = await api.post("/auth/login", { email, password });
+      localStorage.setItem("token", res.data.token);
       router.push("/");
     } catch (err) {
       setError(err.response?.data?.message || "로그인 실패");
     }
-  };
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-white">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-tr from-indigo-100 via-white to-white px-4">
       <form
         onSubmit={handleSubmit}
-        className="bg-white p-8 rounded-xl shadow-md w-full max-w-md"
+        className="max-w-md w-full bg-white p-10 rounded-xl shadow-lg space-y-6"
       >
-        <h2 className="text-2xl font-bold mb-6 text-indigo-600">로그인</h2>
+        <h2 className="text-3xl font-bold text-indigo-700 text-center">
+          서비스 로그인
+        </h2>
+        {error && (
+          <p className="text-red-500 text-center font-semibold">{error}</p>
+        )}
         <input
           type="email"
           placeholder="이메일"
-          className="mb-4 w-full px-4 py-3 border rounded-md focus:ring-2 focus:ring-indigo-500 outline-none"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
+          className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
         />
         <input
           type="password"
           placeholder="비밀번호"
-          className="mb-6 w-full px-4 py-3 border rounded-md focus:ring-2 focus:ring-indigo-500 outline-none"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
+          className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
         />
-        {error && <p className="text-red-500 mb-4">{error}</p>}
         <button
           type="submit"
-          className="w-full py-3 bg-indigo-600 text-white rounded-md font-semibold hover:bg-indigo-700 transition"
+          className="w-full bg-indigo-600 text-white py-3 rounded-md text-lg font-semibold hover:bg-indigo-700 transition"
         >
           로그인
         </button>
