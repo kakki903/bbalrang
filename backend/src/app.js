@@ -1,40 +1,36 @@
-const express = require("express");
-const cors = require("cors");
-const morgan = require("morgan");
+// /src/app.js
 
-const authRoutes = require("./routes/authRoutes");
-const boardRoutes = require("./routes/boardRoutes");
-const postRoutes = require("./routes/postRoutes");
-const commentRoutes = require("./routes/commentRoutes");
-const messageRoutes = require("./routes/messageRoutes");
-const reportRoutes = require("./routes/reportRoutes");
-const blockRoutes = require("./routes/blockRoutes");
-const subscriptionRoutes = require("./routes/subscriptionRoutes");
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
 
-const errorMiddleware = require("./middlewares/errorMiddleware");
+import userRoutes from "./routes/userRoutes.js";
+import oauthRoutes from "./routes/oauthRoutes.js";
+
+dotenv.config();
 
 const app = express();
 
-app.use(cors()); // CORS 활성화
-app.use(morgan("dev")); // 요청 로깅
-app.use(express.json()); // JSON 바디 파서
+// ✅ CORS 설정 (프론트엔드와의 연동을 위한 필수 설정)
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    credentials: true,
+  })
+);
 
-// 라우트 등록
-app.use("/api/auth", authRoutes);
-app.use("/api/boards", boardRoutes);
-app.use("/api/posts", postRoutes);
-app.use("/api/comments", commentRoutes);
-app.use("/api/messages", messageRoutes);
-app.use("/api/reports", reportRoutes);
-app.use("/api/blocks", blockRoutes);
-app.use("/api/subscriptions", subscriptionRoutes);
+// ✅ JSON Body 파싱 미들웨어
+app.use(express.json());
 
-// 404 처리
+// ✅ 사용자 관련 라우트 연결
+app.use("/api/users", userRoutes);
+
+// ✅ 소셜 로그인 관련 라우트 연결
+app.use("/api/oauth", oauthRoutes);
+
+// ✅ 존재하지 않는 라우트 처리 (404)
 app.use((req, res, next) => {
   res.status(404).json({ message: "Not Found" });
 });
 
-// 에러 핸들러 미들웨어
-app.use(errorMiddleware);
-
-module.exports = app;
+export default app;

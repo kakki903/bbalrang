@@ -1,3 +1,7 @@
+# 초기화
+
+npx prisma migrate reset
+
 # 1. .env 의 DATABASE_URL 맞춰놓기
 
 # 2. 마이그레이션 및 DB 반영
